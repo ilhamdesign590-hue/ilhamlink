@@ -270,6 +270,40 @@ h1 .line2{color:var(--a);display:block;text-shadow:0 0 40px rgba(255,34,51,0.5)}
 .admin-del-btn:hover{background:var(--red2);color:var(--red)}
 .admin-del-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
 
+.private-row{border-color:rgba(168,85,247,0.2);background:rgba(168,85,247,0.04)}
+.private-row:hover{border-color:rgba(168,85,247,0.35)}
+.badge-public{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:0.68rem;padding:3px 8px;border-radius:5px;background:var(--green2);color:var(--green);border:1px solid rgba(46,213,115,0.25)}
+.badge-private{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:0.68rem;padding:3px 8px;border-radius:5px;background:var(--purple2);color:var(--purple);border:1px solid rgba(168,85,247,0.25)}
+.btn-view{background:rgba(46,213,115,0.1);color:var(--green);border-color:rgba(46,213,115,0.3)}
+.btn-view:hover{background:rgba(46,213,115,0.2)}
+
+/* ── VIEWER PAGE ──────────────────────────────── */
+#viewer-page{display:none;position:fixed;inset:0;z-index:1000;background:var(--bg);overflow-y:auto}
+.viewer-wrap{max-width:600px;margin:0 auto;padding:4rem 2rem}
+.viewer-card{background:var(--s1);border:1px solid var(--border2);border-radius:20px;padding:2.5rem;text-align:center}
+.viewer-icon{font-size:3.5rem;margin-bottom:1.25rem}
+.viewer-fname{font-family:var(--font-display);font-size:1.5rem;letter-spacing:0.04em;margin-bottom:0.4rem;word-break:break-all}
+.viewer-meta{display:flex;align-items:center;justify-content:center;gap:16px;font-family:var(--font-mono);font-size:0.75rem;color:var(--text3);margin-bottom:2rem;flex-wrap:wrap}
+.viewer-pass-wrap{margin-bottom:1.5rem}
+.viewer-pass-wrap input{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font-body);font-size:0.9rem;padding:0.7rem 1rem;outline:none;margin-bottom:0.75rem;text-align:center}
+.viewer-pass-wrap input:focus{border-color:rgba(168,85,247,0.4)}
+.btn-viewer-dl{display:inline-flex;align-items:center;gap:10px;padding:0.9rem 2.5rem;background:var(--a);color:#000;border:none;border-radius:12px;font-family:var(--font-display);font-size:1.1rem;letter-spacing:0.05em;cursor:pointer;transition:all 0.2s;text-decoration:none}
+.btn-viewer-dl:hover{background:#ff4455;box-shadow:0 0 30px rgba(255,34,51,0.4)}
+.btn-viewer-dl svg{width:18px;height:18px;stroke:#000;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.btn-viewer-back{display:inline-flex;align-items:center;gap:7px;margin-top:1.5rem;background:none;border:1px solid var(--border2);color:var(--text2);padding:0.5rem 1.2rem;border-radius:9px;cursor:pointer;font-family:var(--font-body);font-size:0.85rem;transition:all 0.2s}
+.btn-viewer-back:hover{border-color:var(--a);color:var(--a)}
+.viewer-private-msg{padding:1.5rem;background:rgba(168,85,247,0.06);border:1px solid rgba(168,85,247,0.2);border-radius:12px;color:var(--purple);font-size:0.9rem;margin-bottom:1.5rem}
+.viewer-not-found{color:var(--text3);font-size:0.9rem;margin-bottom:1.5rem}
+
+/* ── PUBLIC FILES SECTION ─────────────────────── */
+#public-files-section{margin-top:2.5rem;animation:fadeUp 0.5s ease}
+.public-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-top:1.25rem}
+.public-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:1.1rem 1.25rem;display:flex;flex-direction:column;gap:10px;transition:border-color 0.2s}
+.public-card:hover{border-color:var(--border2)}
+.public-card-name{font-size:0.9rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.public-card-meta{font-family:var(--font-mono);font-size:0.7rem;color:var(--text3)}
+.public-card-footer{display:flex;align-items:center;justify-content:space-between;gap:8px}
+
 /* ── FOOTER ───────────────────────────────────── */
 footer{position:relative;z-index:1;text-align:center;padding:2rem;color:var(--text3);font-size:0.78rem;border-top:1px solid var(--border)}
 footer span{color:var(--text2)}
@@ -387,6 +421,11 @@ footer span{color:var(--text2)}
       <label for="opt-notif">Notifikasi email ketika file didownload (fitur simulasi)</label>
     </div>
 
+    <div class="checkbox-row private-row" onclick="this.querySelector('input').click()">
+      <input type="checkbox" id="opt-private">
+      <label for="opt-private">🔒 Private — hanya saya yang bisa melihat file ini</label>
+    </div>
+
     <div class="upload-footer">
       <button class="btn-upload" id="btn-upload" disabled>
         <svg viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
@@ -475,7 +514,49 @@ footer span{color:var(--text2)}
       </div>
     </div>
   </div>
+  <!-- PUBLIC FILES SECTION -->
+  <div id="public-files-section" style="display:none">
+    <div class="section-header">
+      <div class="section-title"><div class="dot" style="background:var(--green)"></div>File Publik</div>
+      <span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text3)" id="public-count"></span>
+    </div>
+    <div class="public-grid" id="public-grid"></div>
+  </div>
+
 </main>
+
+<!-- VIEWER PAGE -->
+<div id="viewer-page">
+  <div class="bg-grid"></div>
+  <div class="bg-orbs"><div class="orb orb1"></div><div class="orb orb2"></div></div>
+  <nav style="position:sticky;top:0;z-index:100;display:flex;align-items:center;padding:0 2.5rem;height:64px;background:rgba(6,6,10,0.85);backdrop-filter:blur(24px);border-bottom:1px solid var(--border)">
+    <div class="logo">ILHAMLINK</div>
+  </nav>
+  <div class="viewer-wrap" style="position:relative;z-index:1">
+    <div class="viewer-card" id="viewer-card">
+      <div class="viewer-icon" id="viewer-icon">📄</div>
+      <div class="viewer-fname" id="viewer-fname">—</div>
+      <div class="viewer-meta" id="viewer-meta"></div>
+      <div id="viewer-private-msg" class="viewer-private-msg" style="display:none">🔒 File ini bersifat private. Hanya pemilik yang dapat mengaksesnya.</div>
+      <div id="viewer-not-found" class="viewer-not-found" style="display:none">❌ File tidak ditemukan atau sudah dihapus.</div>
+      <div id="viewer-pass-wrap" class="viewer-pass-wrap" style="display:none">
+        <p style="font-size:0.85rem;color:var(--text2);margin-bottom:0.75rem">File ini dilindungi kata sandi</p>
+        <input type="password" id="viewer-pass-input" placeholder="Masukkan kata sandi...">
+        <button class="btn-viewer-dl" id="btn-viewer-unlock" style="font-size:0.9rem;padding:0.7rem 1.5rem">
+          Buka Kunci
+        </button>
+        <div id="viewer-pass-err" style="color:var(--red);font-size:0.8rem;margin-top:0.75rem;display:none">Kata sandi salah.</div>
+      </div>
+      <div id="viewer-dl-wrap" style="display:none">
+        <button class="btn-viewer-dl" id="btn-viewer-dl">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download File
+        </button>
+      </div>
+      <div><button class="btn-viewer-back" onclick="closeViewer()">← Kembali</button></div>
+    </div>
+  </div>
+</div>
 
 <footer>
   <span>IlhamLink</span> © 2025 — Drop Files. Rule The Web. &nbsp;·&nbsp; Infrastruktur generasi berikutnya untuk berbagi file.
@@ -822,40 +903,51 @@ function startUpload(){
     pfile.textContent=`Mengupload: ${file.name}`;
     let prog=0;
     const startTime=Date.now();
-    const iv=setInterval(()=>{
-      prog+=Math.random()*12+5;
-      if(prog>=100){
-        clearInterval(iv);
-        prog=100;
-        const id=genId();
-        const url=URL.createObjectURL(file);
-        fileStore[id]={file,url,name:file.name};
-        addResult(id,file);
-        // Update user storage
-        if(currentUser && USER_DB[currentUser]){
-          USER_DB[currentUser].uploads++;
-          USER_DB[currentUser].storage+=file.size;
-          saveDB();
-          updateStorageBar();
-          if(getRole()==='admin') renderAdminTable();
+
+    // Baca file sebagai Base64 untuk disimpan permanen
+    const reader=new FileReader();
+    reader.onload=function(e){
+      const base64=e.target.result; // data:mime;base64,...
+      const iv=setInterval(()=>{
+        prog+=Math.random()*12+5;
+        if(prog>=100){
+          clearInterval(iv);
+          prog=100;
+          const id=genId();
+          // Simpan Base64 ke localStorage agar bisa diakses sesi lain
+          try{
+            localStorage.setItem('il_file_'+id, base64);
+          }catch(err){
+            toast('⚠️ File terlalu besar untuk disimpan permanen.','err');
+          }
+          fileStore[id]={base64,name:file.name,type:file.type||'application/octet-stream'};
+          addResult(id,file);
+          if(currentUser && USER_DB[currentUser]){
+            USER_DB[currentUser].uploads++;
+            USER_DB[currentUser].storage+=file.size;
+            saveDB();
+            updateStorageBar();
+            if(getRole()==='admin') renderAdminTable();
+          }
+          stats.files++; stats.size+=file.size; stats.links++; updateStats();
+          idx++;
+          setTimeout(next,300);
+        } else {
+          const totalProg=((idx+(prog/100))/queue.length)*100;
+          pf.style.width=totalProg+'%';
+          pcur.textContent=Math.round(totalProg)+'%';
+          const elapsed=(Date.now()-startTime)/1000;
+          const speed=(file.size*(prog/100))/Math.max(elapsed,0.1);
+          const remaining=file.size*(1-prog/100)/Math.max(speed,1);
+          pspeed.textContent=fmtSize(speed)+'/s';
+          peta.textContent='ETA '+Math.ceil(remaining)+'s';
         }
-        stats.files++; stats.size+=file.size; stats.links++; updateStats();
-        idx++;
-        setTimeout(next,300);
-      } else {
-        const totalProg=((idx+(prog/100))/queue.length)*100;
-        pf.style.width=totalProg+'%';
-        pcur.textContent=Math.round(totalProg)+'%';
-        const elapsed=(Date.now()-startTime)/1000;
-        const speed=(file.size*(prog/100))/Math.max(elapsed,0.1);
-        const remaining=file.size*(1-prog/100)/Math.max(speed,1);
-        pspeed.textContent=fmtSize(speed)+'/s';
-        peta.textContent='ETA '+Math.ceil(remaining)+'s';
-      }
-    },60);
-  }
+      },60);
+    };
+    reader.readAsDataURL(file);
+  } // end next()
   next();
-}
+} // end startUpload()
 
 function genId(){
   // Generate link yang lebih readable: prefix + 8 char alphanumeric uppercase
@@ -870,7 +962,8 @@ function addResult(id,file){
   const expire=document.getElementById('opt-expire').value;
   const pass=document.getElementById('opt-pass').value;
   const maxdl=document.getElementById('opt-maxdl').value;
-  const dl = Math.floor(Math.random()*50);
+  const isPrivate=document.getElementById('opt-private').checked;
+  const dl = Math.floor(Math.random()*10);
   stats.dl+=dl;
 
   // Simpan ke allFilesStore per-user
@@ -878,11 +971,13 @@ function addResult(id,file){
   if(!allFilesStore[owner]) allFilesStore[owner]=[];
   allFilesStore[owner].push({
     id, name: file.name, size: file.size,
-    expire, pass: !!pass, maxdl,
-    date: fmtDate(), owner,
-    dl
+    type: file.type||'application/octet-stream',
+    expire, pass: pass||'', maxdl,
+    date: fmtDate(), owner, dl,
+    isPrivate
   });
   saveAllFiles();
+  renderPublicFiles();
 
   const card=document.createElement('div');
   card.className='result-card';
@@ -895,7 +990,15 @@ function addResult(id,file){
       <span class="rc-size">${fmtSize(file.size)}</span>
     </div>
     <div class="rc-body">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span class="${isPrivate?'badge-private':'badge-public'}">${isPrivate?'🔒 Private':'🌐 Publik'}</span>
+        ${pass?'<span style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text3)">🔑 Password</span>':''}
+      </div>
       <div class="rc-actions">
+        <button class="btn-action btn-view" id="view-${id}">
+          <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          Lihat
+        </button>
         <a class="btn-action btn-dl" href="#" id="dl-${id}">
           <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Download
@@ -910,20 +1013,164 @@ function addResult(id,file){
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           ${expireText(expire)}
         </span>
-        <span>${pass ? '🔒 Password Protected' : '🔓 Public'}</span>
         <span>Max DL: ${maxdl==='0'?'∞':maxdl+'x'}</span>
         <span>${fmtDate()}</span>
       </div>
     </div>`;
 
   card.querySelector('.rc-name').textContent = file.name;
+  card.querySelector('#view-'+id).addEventListener('click', () => openViewer(id));
   card.querySelector('#dl-'+id).addEventListener('click', e => { e.preventDefault(); dlFile(id); });
   card.querySelector('#del-'+id).addEventListener('click', () => deleteResult(id));
 
   list.insertBefore(card, list.firstChild);
 
-  // Refresh admin all-files view if admin
   if(getRole()==='admin') renderAdminAllFiles();
+}
+
+// ──────────────────────────────────────────────────
+// VIEWER
+// ──────────────────────────────────────────────────
+function findFileEntry(id){
+  for(const files of Object.values(allFilesStore)){
+    const f=(files||[]).find(x=>x.id===id);
+    if(f) return f;
+  }
+  return null;
+}
+
+function getFileEmoji(name){
+  const ext=(name||'').split('.').pop().toLowerCase();
+  const map={pdf:'📄',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',ppt:'📑',pptx:'📑',
+    jpg:'🖼️',jpeg:'🖼️',png:'🖼️',gif:'🖼️',webp:'🖼️',svg:'🖼️',
+    mp4:'🎬',mov:'🎬',avi:'🎬',mp3:'🎵',wav:'🎵',
+    zip:'📦',rar:'📦','7z':'📦',txt:'📋',md:'📋',
+    js:'💻',ts:'💻',html:'💻',css:'💻',py:'💻'};
+  return map[ext]||'📄';
+}
+
+function openViewer(id){
+  const entry = findFileEntry(id);
+  const vp = document.getElementById('viewer-page');
+  const vfname = document.getElementById('viewer-fname');
+  const vmeta = document.getElementById('viewer-meta');
+  const vicon = document.getElementById('viewer-icon');
+  const vPrivMsg = document.getElementById('viewer-private-msg');
+  const vNotFound = document.getElementById('viewer-not-found');
+  const vPassWrap = document.getElementById('viewer-pass-wrap');
+  const vDlWrap = document.getElementById('viewer-dl-wrap');
+  const vPassErr = document.getElementById('viewer-pass-err');
+
+  // Reset
+  vPrivMsg.style.display='none'; vNotFound.style.display='none';
+  vPassWrap.style.display='none'; vDlWrap.style.display='none';
+  vPassErr.style.display='none';
+
+  vp.style.display='block';
+  document.body.style.overflow='hidden';
+
+  if(!entry){
+    vfname.textContent='File Tidak Ditemukan';
+    vicon.textContent='❓';
+    vmeta.innerHTML='';
+    vNotFound.style.display='block';
+    return;
+  }
+
+  vfname.textContent=entry.name;
+  vicon.textContent=getFileEmoji(entry.name);
+  vmeta.innerHTML=`
+    <span>${fmtSize(entry.size)}</span>
+    <span>·</span>
+    <span>oleh ${entry.owner==='guest'?'Tamu':entry.owner}</span>
+    <span>·</span>
+    <span>${entry.date}</span>
+    ${entry.isPrivate?'<span class="badge-private">🔒 Private</span>':'<span class="badge-public">🌐 Publik</span>'}
+  `;
+
+  // Private check — pemilik boleh akses, admin boleh akses, orang lain tidak
+  const isOwner = (currentUser && currentUser===entry.owner) || (entry.owner==='guest' && !currentUser);
+  const isAdminUser = getRole()==='admin';
+  if(entry.isPrivate && !isOwner && !isAdminUser){
+    vPrivMsg.style.display='block';
+    return;
+  }
+
+  // Password check
+  if(entry.pass){
+    vPassWrap.style.display='block';
+    document.getElementById('viewer-pass-input').value='';
+    document.getElementById('btn-viewer-unlock').onclick=function(){
+      const input=document.getElementById('viewer-pass-input').value;
+      if(input===entry.pass){
+        vPassWrap.style.display='none';
+        showViewerDownload(id, entry);
+      } else {
+        vPassErr.style.display='block';
+      }
+    };
+    document.getElementById('viewer-pass-input').onkeydown=function(e){
+      if(e.key==='Enter') document.getElementById('btn-viewer-unlock').click();
+    };
+  } else {
+    showViewerDownload(id, entry);
+  }
+}
+
+function showViewerDownload(id, entry){
+  const vDlWrap = document.getElementById('viewer-dl-wrap');
+  vDlWrap.style.display='block';
+  document.getElementById('btn-viewer-dl').onclick=function(){ dlFile(id); };
+}
+
+function closeViewer(){
+  document.getElementById('viewer-page').style.display='none';
+  document.body.style.overflow='';
+}
+
+// ──────────────────────────────────────────────────
+// PUBLIC FILES GRID
+// ──────────────────────────────────────────────────
+function renderPublicFiles(){
+  const section=document.getElementById('public-files-section');
+  const grid=document.getElementById('public-grid');
+  const countEl=document.getElementById('public-count');
+  if(!section||!grid) return;
+
+  // Kumpulkan semua file public dari semua user
+  const publicFiles=[];
+  Object.values(allFilesStore).forEach(files=>{
+    (files||[]).forEach(f=>{ if(!f.isPrivate) publicFiles.push(f); });
+  });
+
+  if(!publicFiles.length){ section.style.display='none'; return; }
+  section.style.display='block';
+  countEl.textContent=`${publicFiles.length} file tersedia`;
+
+  const sorted=[...publicFiles].reverse();
+  grid.innerHTML='';
+  sorted.forEach(f=>{
+    const card=document.createElement('div');
+    card.className='public-card';
+    card.innerHTML=`
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:1.8rem">${getFileEmoji(f.name)}</span>
+        <div style="min-width:0">
+          <div class="public-card-name"></div>
+          <div class="public-card-meta">${fmtSize(f.size)}</div>
+        </div>
+      </div>
+      <div class="public-card-footer">
+        <span class="public-card-meta">oleh ${f.owner==='guest'?'Tamu':f.owner}</span>
+        <button class="btn-action btn-view" id="pub-view-${f.id}" style="padding:5px 12px;font-size:0.78rem">
+          <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          Lihat
+        </button>
+      </div>`;
+    card.querySelector('.public-card-name').textContent=f.name;
+    card.querySelector('#pub-view-'+f.id).addEventListener('click',()=>openViewer(f.id));
+    grid.appendChild(card);
+  });
 }
 
 // ──────────────────────────────────────────────────
@@ -1010,20 +1257,33 @@ function adminDeleteFile(owner,id){
   if(allFilesStore[owner]){
     allFilesStore[owner]=allFilesStore[owner].filter(f=>f.id!==id);
     saveAllFiles();
-    // Update stats user
+    localStorage.removeItem('il_file_'+id);
     if(USER_DB[owner]){
       USER_DB[owner].uploads=Math.max(0,(USER_DB[owner].uploads||1)-1);
       saveDB();
     }
     renderAdminAllFiles();
     renderAdminTable();
+    renderPublicFiles();
     toast('File dihapus oleh admin.','ok');
   }
 }
 
 function dlFile(id){
-  const s=fileStore[id]; if(!s) return;
-  const a=document.createElement('a'); a.href=s.url; a.download=s.name;
+  // Cari dari fileStore session dulu, lalu dari localStorage
+  let base64 = fileStore[id]?.base64 || localStorage.getItem('il_file_'+id);
+  let name = fileStore[id]?.name;
+  // Cari nama dari allFilesStore jika tidak ada di fileStore
+  if(!name){
+    for(const files of Object.values(allFilesStore)){
+      const f=(files||[]).find(x=>x.id===id);
+      if(f){ name=f.name; break; }
+    }
+  }
+  if(!base64 || !name){ toast('❌ File tidak tersedia.','err'); return; }
+  const a=document.createElement('a');
+  a.href=base64;
+  a.download=name;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   stats.dl++; updateStats();
   toast('Download dimulai... ⬇️','ok');
@@ -1032,28 +1292,29 @@ function dlFile(id){
 function deleteResult(id){
   const el=document.getElementById('rc-'+id);
   if(el){ el.style.opacity='0';el.style.transform='translateX(10px)';el.style.transition='all 0.25s'; setTimeout(()=>el.remove(),250); }
-  if(fileStore[id]){ URL.revokeObjectURL(fileStore[id].url); delete fileStore[id]; }
-  // Hapus dari allFilesStore milik user ini
+  delete fileStore[id];
+  localStorage.removeItem('il_file_'+id);
   const owner = currentUser||'guest';
   if(allFilesStore[owner]){
     allFilesStore[owner]=allFilesStore[owner].filter(f=>f.id!==id);
     saveAllFiles();
   }
   stats.links=Math.max(0,stats.links-1); updateStats();
-  toast('File dihapus dari daftar.','ok');
+  renderPublicFiles();
+  toast('File dihapus.','ok');
   if(getRole()==='admin') renderAdminAllFiles();
 }
 
 function clearAll(){
   document.getElementById('results-list').innerHTML='';
   document.getElementById('results-section').style.display='none';
-  Object.values(fileStore).forEach(s=>URL.revokeObjectURL(s.url));
-  fileStore={};
-  // Hapus dari allFilesStore milik user ini
   const owner=currentUser||'guest';
+  (allFilesStore[owner]||[]).forEach(f=>{ localStorage.removeItem('il_file_'+f.id); });
+  fileStore={};
   if(allFilesStore[owner]) { allFilesStore[owner]=[]; saveAllFiles(); }
   stats.links=0; updateStats();
-  toast('Semua link dihapus.','ok');
+  renderPublicFiles();
+  toast('Semua file dihapus.','ok');
   if(getRole()==='admin') renderAdminAllFiles();
 }
 
