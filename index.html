@@ -765,6 +765,63 @@ function logout(){
 }
 
 // ──────────────────────────────────────────────────
+// INDEXEDDB SETUP - Replace localStorage for better memory handling
+// ──────────────────────────────────────────────────
+const DB_NAME='IlhamLink';
+const STORE_NAME='files';
+let db=null;
+
+function initDB(){
+  return new Promise((resolve)=>{
+    const req=indexedDB.open(DB_NAME, 1);
+    req.onerror=()=>resolve(null);
+    req.onsuccess=()=>{
+      db=req.result;
+      resolve(db);
+    };
+    req.onupgradeneeded=(e)=>{
+      const database=e.target.result;
+      if(!database.objectStoreNames.contains(STORE_NAME)){
+        database.createObjectStore(STORE_NAME);
+      }
+    };
+  });
+}
+
+function saveFileBlob(id, blob){
+  return new Promise((resolve)=>{
+    if(!db){ resolve(false); return; }
+    const tx=db.transaction(STORE_NAME,'readwrite');
+    const store=tx.objectStore(STORE_NAME);
+    const req=store.put(blob, id);
+    req.onsuccess=()=>resolve(true);
+    req.onerror=()=>resolve(false);
+  });
+}
+
+function getFileBlob(id){
+  return new Promise((resolve)=>{
+    if(!db){ resolve(null); return; }
+    const tx=db.transaction(STORE_NAME,'readonly');
+    const store=tx.objectStore(STORE_NAME);
+    const req=store.get(id);
+    req.onsuccess=()=>resolve(req.result||null);
+    req.onerror=()=>resolve(null);
+  });
+}
+
+function deleteFileBlob(id){
+  return new Promise((resolve)=>{
+    if(!db){ resolve(false); return; }
+    const tx=db.transaction(STORE_NAME,'readwrite');
+    const store=tx.objectStore(STORE_NAME);
+    const req=store.delete(id);
+    req.onsuccess=()=>resolve(true);
+    req.onerror=()=>resolve(false);
+  });
+}
+
+// ──────────────────────────────────────────────────
 // FILE HANDLING
 // ──────────────────────────────────────────────────
 function getFileColor(ext){
@@ -904,23 +961,30 @@ function startUpload(){
     let prog=0;
     const startTime=Date.now();
 
-    // Baca file sebagai Base64 untuk disimpan permanen
+    // Baca file sebagai Blob dan simpan ke IndexedDB (tanpa Base64 untuk efisiensi memory)
     const reader=new FileReader();
-    reader.onload=function(e){
-      const base64=e.target.result; // data:mime;base64,...
-      const iv=setInterval(()=>{
+    reader.onload=async function(e){
+      const blob=new Blob([e.target.result], {type: file.type||'application/octet-stream'});
+      const id=genId();
+      
+      // Simpan ke IndexedDB (lebih efisien untuk file besar)
+      const saved=await saveFileBlob(id, blob);
+      if(!saved){
+        toast('⚠️ File terlalu besar untuk disimpan.','err');
+        idx++;
+        setTimeout(next,300);
+        return;
+      }
+      
+      // Simulate progress
+      const iv=setInterval(async ()=>{
         prog+=Math.random()*12+5;
         if(prog>=100){
           clearInterval(iv);
           prog=100;
-          const id=genId();
-          // Simpan Base64 ke localStorage agar bisa diakses sesi lain
-          try{
-            localStorage.setItem('il_file_'+id, base64);
-          }catch(err){
-            toast('⚠️ File terlalu besar untuk disimpan permanen.','err');
-          }
-          fileStore[id]={base64,name:file.name,type:file.type||'application/octet-stream'};
+          
+          // Simpan referensi di fileStore untuk session ini (tanpa data besar)
+          fileStore[id]={name:file.name, type:file.type||'application/octet-stream', size: file.size};
           addResult(id,file);
           if(currentUser && USER_DB[currentUser]){
             USER_DB[currentUser].uploads++;
@@ -944,7 +1008,7 @@ function startUpload(){
         }
       },60);
     };
-    reader.readAsDataURL(file);
+    reader.readAsArrayBuffer(file);
   } // end next()
   next();
 } // end startUpload()
@@ -1253,11 +1317,27 @@ function renderAdminAllFiles(){
   });
 }
 
+function deleteResult(id){
+  const el=document.getElementById('rc-'+id);
+  if(el){ el.style.opacity='0';el.style.transform='translateX(10px)';el.style.transition='all 0.25s'; setTimeout(()=>el.remove(),250); }
+  delete fileStore[id];
+  deleteFileBlob(id); // Remove from IndexedDB
+  const owner = currentUser||'guest';
+  if(allFilesStore[owner]){
+    allFilesStore[owner]=allFilesStore[owner].filter(f=>f.id!==id);
+    saveAllFiles();
+  }
+  stats.links=Math.max(0,stats.links-1); updateStats();
+  renderPublicFiles();
+  toast('File dihapus.','ok');
+  if(getRole()==='admin') renderAdminAllFiles();
+}
+
 function adminDeleteFile(owner,id){
   if(allFilesStore[owner]){
     allFilesStore[owner]=allFilesStore[owner].filter(f=>f.id!==id);
     saveAllFiles();
-    localStorage.removeItem('il_file_'+id);
+    deleteFileBlob(id); // Remove from IndexedDB
     if(USER_DB[owner]){
       USER_DB[owner].uploads=Math.max(0,(USER_DB[owner].uploads||1)-1);
       saveDB();
@@ -1270,9 +1350,10 @@ function adminDeleteFile(owner,id){
 }
 
 function dlFile(id){
-  // Cari dari fileStore session dulu, lalu dari localStorage
-  let base64 = fileStore[id]?.base64 || localStorage.getItem('il_file_'+id);
-  let name = fileStore[id]?.name;
+  // Cari dari fileStore session dulu, lalu dari IndexedDB
+  const sessionFile = fileStore[id];
+  let name = sessionFile?.name;
+  
   // Cari nama dari allFilesStore jika tidak ada di fileStore
   if(!name){
     for(const files of Object.values(allFilesStore)){
@@ -1280,36 +1361,34 @@ function dlFile(id){
       if(f){ name=f.name; break; }
     }
   }
-  if(!base64 || !name){ toast('❌ File tidak tersedia.','err'); return; }
-  const a=document.createElement('a');
-  a.href=base64;
-  a.download=name;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  stats.dl++; updateStats();
-  toast('Download dimulai... ⬇️','ok');
-}
-
-function deleteResult(id){
-  const el=document.getElementById('rc-'+id);
-  if(el){ el.style.opacity='0';el.style.transform='translateX(10px)';el.style.transition='all 0.25s'; setTimeout(()=>el.remove(),250); }
-  delete fileStore[id];
-  localStorage.removeItem('il_file_'+id);
-  const owner = currentUser||'guest';
-  if(allFilesStore[owner]){
-    allFilesStore[owner]=allFilesStore[owner].filter(f=>f.id!==id);
-    saveAllFiles();
-  }
-  stats.links=Math.max(0,stats.links-1); updateStats();
-  renderPublicFiles();
-  toast('File dihapus.','ok');
-  if(getRole()==='admin') renderAdminAllFiles();
+  
+  if(!name){ toast('❌ File tidak tersedia.','err'); return; }
+  
+  // Get blob from IndexedDB
+  getFileBlob(id).then(blob=>{
+    if(!blob){ toast('❌ File tidak tersedia di storage.','err'); return; }
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=name;
+    document.body.appendChild(a); 
+    a.click(); 
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    stats.dl++; 
+    updateStats();
+    toast('Download dimulai... ⬇️','ok');
+  });
 }
 
 function clearAll(){
   document.getElementById('results-list').innerHTML='';
   document.getElementById('results-section').style.display='none';
   const owner=currentUser||'guest';
-  (allFilesStore[owner]||[]).forEach(f=>{ localStorage.removeItem('il_file_'+f.id); });
+  // Delete all files from IndexedDB for this owner
+  (allFilesStore[owner]||[]).forEach(f=>{ 
+    deleteFileBlob(f.id); 
+  });
   fileStore={};
   if(allFilesStore[owner]) { allFilesStore[owner]=[]; saveAllFiles(); }
   stats.links=0; updateStats();
@@ -1358,7 +1437,9 @@ document.addEventListener('keydown',e=>{
 // ──────────────────────────────────────────────────
 // INIT
 // ──────────────────────────────────────────────────
-applySession();
+initDB().then(()=>{
+  applySession();
+});
 </script>
 </body>
 </html>
