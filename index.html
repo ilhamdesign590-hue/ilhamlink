@@ -595,6 +595,29 @@ footer span{color:var(--text2)}
   </div>
 </div>
 
+<!-- SHARE MODAL -->
+<div class="modal-overlay" id="share-modal">
+  <div class="modal-wrap">
+    <button class="modal-close" onclick="closeShareModal()">✕</button>
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-icon" style="background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.3)">🔗</div>
+        <div class="modal-title">BAGIKAN FILE</div>
+        <div class="modal-sub" id="share-fname">File Name</div>
+      </div>
+      <div class="form-group">
+        <label>Pilih Username untuk Dibagikan</label>
+        <select id="share-username" style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font-body);font-size:0.9rem;padding:0.7rem 1rem;outline:none">
+          <option value="">Pilih user...</option>
+        </select>
+      </div>
+      <div id="share-list" style="max-height:200px;overflow-y:auto;margin-bottom:1rem"></div>
+      <button class="btn-modal-submit" style="background:var(--purple);color:#fff" onclick="shareFile()">BAGIKAN →</button>
+      <div id="share-error" class="modal-error" style="margin-top:1rem"></div>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast"></div>
 
@@ -1038,7 +1061,7 @@ function addResult(id,file){
     type: file.type||'application/octet-stream',
     expire, pass: pass||'', maxdl,
     date: fmtDate(), owner, dl,
-    isPrivate
+    isPrivate, sharedWith: []
   });
   saveAllFiles();
   renderPublicFiles();
@@ -1067,6 +1090,10 @@ function addResult(id,file){
           <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Download
         </a>
+        <button class="btn-action btn-share" id="share-${id}" style="background:rgba(168,85,247,0.1);color:var(--purple);border-color:rgba(168,85,247,0.3)">
+          <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          Bagikan
+        </button>
         <button class="btn-action btn-del" id="del-${id}">
           <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
           Hapus
@@ -1085,6 +1112,7 @@ function addResult(id,file){
   card.querySelector('.rc-name').textContent = file.name;
   card.querySelector('#view-'+id).addEventListener('click', () => openViewer(id));
   card.querySelector('#dl-'+id).addEventListener('click', e => { e.preventDefault(); dlFile(id); });
+  card.querySelector('#share-'+id).addEventListener('click', () => openShareModal(id));
   card.querySelector('#del-'+id).addEventListener('click', () => deleteResult(id));
 
   list.insertBefore(card, list.firstChild);
@@ -1152,10 +1180,12 @@ function openViewer(id){
     ${entry.isPrivate?'<span class="badge-private">🔒 Private</span>':'<span class="badge-public">🌐 Publik</span>'}
   `;
 
-  // Private check — pemilik boleh akses, admin boleh akses, orang lain tidak
+  // Private check — pemilik boleh akses, admin boleh akses, orang lain tidak (kecuali di-share)
   const isOwner = (currentUser && currentUser===entry.owner) || (entry.owner==='guest' && !currentUser);
   const isAdminUser = getRole()==='admin';
-  if(entry.isPrivate && !isOwner && !isAdminUser){
+  const isSharedToMe = currentUser && entry.sharedWith && entry.sharedWith.includes(currentUser);
+  
+  if(entry.isPrivate && !isOwner && !isAdminUser && !isSharedToMe){
     vPrivMsg.style.display='block';
     return;
   }
@@ -1207,6 +1237,17 @@ function renderPublicFiles(){
     (files||[]).forEach(f=>{ if(!f.isPrivate) publicFiles.push(f); });
   });
 
+  // Tambah file yang di-share ke user saat ini (jika login)
+  if(currentUser){
+    Object.entries(allFilesStore).forEach(([owner,files])=>{
+      (files||[]).forEach(f=>{
+        if(f.sharedWith && f.sharedWith.includes(currentUser) && !publicFiles.find(pf=>pf.id===f.id)){
+          publicFiles.push({...f, isShared: true, sharedBy: owner});
+        }
+      });
+    });
+  }
+
   if(!publicFiles.length){ section.style.display='none'; return; }
   section.style.display='block';
   countEl.textContent=`${publicFiles.length} file tersedia`;
@@ -1224,6 +1265,7 @@ function renderPublicFiles(){
           <div class="public-card-meta">${fmtSize(f.size)}</div>
         </div>
       </div>
+      ${f.isShared?'<div style="font-size:0.7rem;color:var(--purple);background:rgba(168,85,247,0.1);padding:3px 6px;border-radius:5px">🔗 Dibagikan dari '+f.sharedBy+'</div>':''}
       <div class="public-card-footer">
         <span class="public-card-meta">oleh ${f.owner==='guest'?'Tamu':f.owner}</span>
         <button class="btn-action btn-view" id="pub-view-${f.id}" style="padding:5px 12px;font-size:0.78rem">
@@ -1419,9 +1461,120 @@ function toast(msg, type=''){
 }
 
 // ──────────────────────────────────────────────────
+// SHARE FUNCTIONALITY
+// ──────────────────────────────────────────────────
+let currentShareFileId = null;
+
+function openShareModal(id){
+  const entry = findFileEntry(id);
+  if(!entry){ toast('❌ File tidak ditemukan.','err'); return; }
+  
+  currentShareFileId = id;
+  document.getElementById('share-fname').textContent = entry.name;
+  document.getElementById('share-error').style.display='none';
+  document.getElementById('share-error').textContent='';
+  
+  // Populate user list
+  const select = document.getElementById('share-username');
+  select.innerHTML = '<option value="">Pilih user...</option>';
+  Object.keys(USER_DB).forEach(user=>{
+    if(user !== currentUser && user !== 'admin'){
+      select.innerHTML += `<option value="${user}">${user}</option>`;
+    }
+  });
+  
+  // Show current shared users
+  renderShareList(entry);
+  
+  document.getElementById('share-modal').classList.add('open');
+}
+
+function closeShareModal(){
+  document.getElementById('share-modal').classList.remove('open');
+  currentShareFileId = null;
+}
+
+function renderShareList(entry){
+  const list = document.getElementById('share-list');
+  if(!entry.sharedWith || entry.sharedWith.length === 0){
+    list.innerHTML = '<div style="font-size:0.8rem;color:var(--text3);padding:0.5rem">Belum dibagikan ke siapa pun</div>';
+    return;
+  }
+  list.innerHTML = '<div style="font-size:0.75rem;color:var(--text3);margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.05em">Dibagikan ke:</div>' + entry.sharedWith.map(user=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem;background:var(--s2);border-radius:8px;margin-bottom:5px">
+      <span style="font-size:0.85rem">${user}</span>
+      <button class="btn-action" onclick="removeShare('${currentShareFileId}','${user}')" style="padding:3px 8px;font-size:0.7rem;background:var(--red2);color:var(--red);border-color:rgba(255,71,87,0.3)">
+        Cabut
+      </button>
+    </div>
+  `).join('');
+}
+
+function shareFile(){
+  if(!currentShareFileId){ toast('❌ Error: File ID tidak ditemukan.','err'); return; }
+  
+  const username = document.getElementById('share-username').value;
+  if(!username){ 
+    showShareError('Pilih user untuk dibagikan file.');
+    return; 
+  }
+  
+  if(!USER_DB[username]){
+    showShareError('User tidak ditemukan.');
+    return;
+  }
+  
+  // Find and update file entry
+  let found = false;
+  const owner = currentUser || 'guest';
+  if(allFilesStore[owner]){
+    const fileEntry = allFilesStore[owner].find(f=>f.id===currentShareFileId);
+    if(fileEntry){
+      if(!fileEntry.sharedWith) fileEntry.sharedWith = [];
+      if(!fileEntry.sharedWith.includes(username)){
+        fileEntry.sharedWith.push(username);
+        saveAllFiles();
+        found = true;
+        renderShareList(fileEntry);
+        document.getElementById('share-username').value = '';
+        toast(`✅ File dibagikan ke ${username}!`, 'ok');
+      } else {
+        showShareError(`File sudah dibagikan ke ${username}.`);
+      }
+    }
+  }
+  
+  if(!found){
+    showShareError('File tidak ditemukan.');
+  }
+}
+
+function removeShare(fileId, username){
+  const owner = currentUser || 'guest';
+  if(allFilesStore[owner]){
+    const fileEntry = allFilesStore[owner].find(f=>f.id===fileId);
+    if(fileEntry){
+      fileEntry.sharedWith = fileEntry.sharedWith.filter(u=>u!==username);
+      saveAllFiles();
+      renderShareList(fileEntry);
+      toast(`Akses ${username} dicabut.`, 'ok');
+    }
+  }
+}
+
+function showShareError(msg){
+  const el = document.getElementById('share-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+// ──────────────────────────────────────────────────
 // CLOSE AUTH ON OUTSIDE CLICK
 // ──────────────────────────────────────────────────
 document.getElementById('auth-modal').addEventListener('click',e=>{if(e.target===document.getElementById('auth-modal'))closeAuth();});
+
+// CLOSE SHARE MODAL ON OUTSIDE CLICK
+document.getElementById('share-modal').addEventListener('click',e=>{if(e.target===document.getElementById('share-modal'))closeShareModal();});
 
 // ENTER KEY
 document.addEventListener('keydown',e=>{
